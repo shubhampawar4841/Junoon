@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funeral Services Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #3498db;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .data-table {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .chart-container {
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Spinner -->
+    <div class="loading" id="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <h1><i class="fas fa-church"></i> Funeral Services Dashboard</h1>
+            <p class="lead">Comprehensive database of funeral service providers across the United States</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h3 id="total-businesses">-</h3>
+                    <p class="text-muted">Total Businesses</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h3 id="total-states">-</h3>
+                    <p class="text-muted">States Covered</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3 id="data-completeness">-</h3>
+                    <p class="text-muted">Data Completeness</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 id="last-updated">-</h3>
+                    <p class="text-muted">Last Updated</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Business Distribution by State</h5>
+                        <div class="chart-container">
+                            <canvas id="stateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Business Types Distribution</h5>
+                        <div class="chart-container">
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <select class="form-select" id="stateFilter">
+                        <option value="all">All States</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="typeFilter">
+                        <option value="all">All Business Types</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search businesses...">
+                        <button class="btn btn-primary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-table">
+            <table id="dataTable" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Business Name</th>
+                        <th>Type</th>
+                        <th>Address</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Phone</th>
+                        <th>Website</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Global variables
+        let dataTable;
+        let stateChart;
+        let typeChart;
+
+        // Initialize the dashboard
+        async function initializeDashboard() {
+            try {
+                // Load filters
+                const filters = await fetch('/api/filters').then(r => r.json());
+                populateFilters(filters);
+
+                // Load statistics
+                const stats = await fetch('/api/stats').then(r => r.json());
+                updateStatistics(stats);
+
+                // Initialize charts
+                initializeCharts(stats);
+
+                // Initialize data table
+                initializeDataTable();
+
+                // Hide loading spinner
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                alert('Error loading dashboard data. Please try again.');
+            }
+        }
+
+        // Populate filter dropdowns
+        function populateFilters(filters) {
+            const stateFilter = document.getElementById('stateFilter');
+            const typeFilter = document.getElementById('typeFilter');
+
+            filters.states.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                stateFilter.appendChild(option);
+            });
+
+            filters.business_types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeFilter.appendChild(option);
+            });
+        }
+
+        // Update statistics cards
+        function updateStatistics(stats) {
+            document.getElementById('total-businesses').textContent = stats.total_businesses;
+            document.getElementById('total-states').textContent = Object.keys(stats.states).length;
+            
+            const completeness = Object.values(stats.completeness).reduce((a, b) => a + b, 0) / 
+                               Object.keys(stats.completeness).length;
+            document.getElementById('data-completeness').textContent = `${completeness.toFixed(1)}%`;
+            
+            document.getElementById('last-updated').textContent = new Date().toLocaleDateString();
+        }
+
+        // Initialize charts
+        function initializeCharts(stats) {
+            // State distribution chart
+            const stateCtx = document.getElementById('stateChart').getContext('2d');
+            stateChart = new Chart(stateCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(stats.states),
+                    datasets: [{
+                        label: 'Number of Businesses',
+                        data: Object.values(stats.states),
+                        backgroundColor: 'rgba(52, 152, 219, 0.5)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Business type distribution chart
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            typeChart = new Chart(typeCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(stats.business_types),
+                    datasets: [{
+                        data: Object.values(stats.business_types),
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.5)',
+                            'rgba(46, 204, 113, 0.5)',
+                            'rgba(155, 89, 182, 0.5)',
+                            'rgba(241, 196, 15, 0.5)',
+                            'rgba(231, 76, 60, 0.5)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Initialize DataTable
+        function initializeDataTable() {
+            dataTable = $('#dataTable').DataTable({
+                processing: true,
+                serverSide: false,
+                ajax: {
+                    url: '/api/data',
+                    dataSrc: 'data',
+                    error: function (xhr, error, thrown) {
+                        console.error("DataTables AJAX error:", xhr, error, thrown);
+                        alert('Error loading data for the table. Check console for details.');
+                        $('#dataTable tbody').html('<tr><td colspan="7" class="text-center">Failed to load data.</td></tr>');
+                    }
+                },
+                columns: [
+                    { data: 'Business Name' },
+                    { data: 'Type' },
+                    { data: 'Address' },
+                    { data: 'City' },
+                    { data: 'State' },
+                    { data: 'Phone' },
+                    { data: 'Website' }
+                ],
+                columnDefs: [
+                    {
+                        targets: 6,
+                        render: function(data) {
+                            return data && data !== 'N/A' ? 
+                                `<a href="${data}" target="_blank">${data}</a>` : 
+                                'N/A';
+                        }
+                    }
+                ],
+                pageLength: 25,
+                order: [[0, 'asc']],
+                language: {
+                    processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span>'
+                }
+            });
+
+            // Add custom filtering
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    const state = $('#stateFilter').val();
+                    const type = $('#typeFilter').val();
+                    const search = $('#searchInput').val().toLowerCase();
+                    
+                    const row = dataTable.row(dataIndex).data();
+                    
+                    // Ensure row data is available
+                    if (!row) return false;
+
+                    // State filter
+                    if (state !== 'all' && row.State !== state) {
+                        return false;
+                    }
+                    
+                    // Type filter
+                    if (type !== 'all' && row.Type !== type) {
+                        return false;
+                    }
+                    
+                    // Search filter
+                    if (search) {
+                        const searchableFields = [
+                            row['Business Name'],
+                            row.Address,
+                            row.City
+                        ];
+                        if (!searchableFields.some(field => 
+                            field && String(field).toLowerCase().includes(search))) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                }
+            );
+        }
+
+        // Event listeners
+        document.getElementById('stateFilter').addEventListener('change', function() {
+            dataTable.draw();
+        });
+
+        document.getElementById('typeFilter').addEventListener('change', function() {
+            dataTable.draw();
+        });
+
+        document.getElementById('searchButton').addEventListener('click', function() {
+            dataTable.draw();
+        });
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+</body>
+</html> 
